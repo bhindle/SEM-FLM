@@ -1,0 +1,158 @@
+model {
+  
+  # prior for the environment effect
+  beta.time.thresh ~ dunif(-0.05, 0.05)
+  sigma.latent.rep <- 1
+  sig.latent ~ dunif(0, 0.2)
+  
+  # data model for environment effect
+  for (i in 1:n.year) {
+    env.effect[i] <- density[i] - clim.ef[i] - beta.time.thresh * time[i] 
+    latef[i,1:2] ~ dmnorm(mu[], precmat[ , ])
+  }
+  for(i in 9:(n.year+8)){b[i] <- latef[i-8,1]}
+  
+  cor.lat ~ dunif(-1, 1)
+  precmat[1:2, 1:2] <- inverse(cov[,])
+  cov[1,1] <- pow(sig.latent, 2)
+  cov[1,2] <- sig.latent * sigma.latent.rep * cor.lat
+  cov[2,1] <- sig.latent * sigma.latent.rep * cor.lat
+  cov[2,2] <- pow(sigma.latent.rep, 2)
+  mu[1] <- 0
+  mu[2] <- 0
+  
+  clim.ef <- X %*% b 
+  
+  ## prior for s(weeks):pcovar... 
+  K1 <- S1[1:8,1:8] * lambda[1] + S1[1:8,9:16] * lambda[2]
+  b[1:8] ~ dmnorm(zero[1:8],K1) 
+  
+  for(i in 1:2){
+  lambda[i] <- exp(rho[i])
+  rho[i] ~ dunif(-10, 20)
+  }
+
+  # Priors for lamb survival coefficients 
+  asymp.surv.L  ~ dunif(-5, 5)
+  thresh.surv.L ~ dunif(2.2, 2.8)
+  beta.env.surv.L ~ dunif(0, 50)
+  beta.time.asymp.surv.L  ~ dunif(-1, 1)
+  # Lamb survival data model
+  for (i in 1:n.year) {
+    is.past.thresh.L[i] <- step(env.effect[i] - thresh.surv.L)
+    logit(mu.surv.L[i]) <- asymp.surv.L + beta.time.asymp.surv.L * time[i] - is.past.thresh.L[i] * beta.env.surv.L * (env.effect[i] - thresh.surv.L)
+    surv.L[i] ~ dbin(mu.surv.L[i], n.surv.L[i])
+  }
+
+  # Priors for yearling survival coefficients 
+  asymp.surv.Y  ~ dunif(-5, 5)
+  thresh.surv.Y ~ dunif(2.4, 2.8)
+  beta.env.surv.Y ~ dunif(0, 50)
+  beta.time.asymp.surv.Y  ~ dunif(-1, 1)
+  # Lamb survival data model
+  for (i in 1:n.year) {
+    is.past.thresh.Y[i] <- step(env.effect[i] - thresh.surv.Y)
+    logit(mu.surv.Y[i]) <- asymp.surv.Y + beta.time.asymp.surv.Y * time[i] - is.past.thresh.Y[i] * beta.env.surv.Y * (env.effect[i] - thresh.surv.Y)
+    surv.Y[i] ~ dbin(mu.surv.Y[i], n.surv.Y[i])
+  }
+
+  # Priors for adult survival coefficients 
+  asymp.surv.A  ~ dunif(-5, 5)
+  thresh.surv.A ~ dunif(2.4, 2.8)
+  beta.env.surv.A ~ dunif(0, 50)
+  beta.time.asymp.surv.A  ~ dunif(-1, 1)
+  # Lamb survival data model
+  for (i in 1:n.year) {
+    is.past.thresh.A[i] <- step(env.effect[i] - thresh.surv.A)
+    logit(mu.surv.A[i]) <- asymp.surv.A + beta.time.asymp.surv.A * time[i] - is.past.thresh.A[i] * beta.env.surv.A * (env.effect[i] - thresh.surv.A)
+    surv.A[i] ~ dbin(mu.surv.A[i], n.surv.A[i])
+  }
+
+  # Priors for lamb reproduction 
+  asymp.rep.L ~ dnorm(0, pow(100, -2))
+  beta.env.rep.L ~ dnorm(0, pow(100, -2))
+  beta.repro.rep.L ~ dunif(0, 100)
+  beta.time.asymp.rep.L ~ dnorm(0, pow(1, -2))
+  # Lamb reproduction model
+  for (i in 1:n.year){
+    logit(mu.rep.L[i]) <- asymp.rep.L + beta.time.asymp.rep.L * time[i] - beta.env.rep.L * env.effect[i] - beta.repro.rep.L * latef[i,2]
+    rep.L[i] ~ dbin(mu.rep.L[i], n.rep.L[i])
+  }
+
+  # Priors for adult twinning 
+  asymp.twn.A ~ dnorm(0, pow(100, -2))
+  beta.env.twn.A ~ dnorm(0, pow(100, -2))
+  beta.repro.twn.A ~ dunif(0, 100)
+  beta.time.asymp.twn.A ~ dnorm(0, pow(1, -2))
+  # Adult twinning model
+  for (i in 1:n.year){
+    logit(mu.twn.A[i]) <- asymp.twn.A + beta.time.asymp.twn.A * time[i] - beta.env.twn.A * env.effect[i] - beta.repro.twn.A * latef[i,2]
+    twn.A[i] ~ dbin(mu.twn.A[i], n.twn.A[i])
+  }
+
+# Priors for yearling reproduction 
+  asymp.rep.Y ~ dnorm(0, pow(100, -2))
+  beta.env.rep.Y ~ dnorm(0, pow(100, -2))
+  beta.time.asymp.rep.Y ~ dnorm(0, pow(1, -2))
+# Yearling reproduction model
+ for (i in 1:n.year){
+  logit(mu.rep.Y[i]) <- asymp.rep.Y + beta.time.asymp.rep.Y * time[i] - beta.env.rep.Y * env.effect[i]
+  rep.Y[i] ~ dbin(mu.rep.Y[i], n.rep.Y[i])
+}
+
+# Priors for adult reproduction 
+  asymp.rep.A ~ dnorm(0, pow(100, -2))
+  beta.env.rep.A ~ dnorm(0, pow(100, -2))
+  beta.repro.rep.A ~ dunif(0, 100)
+  beta.time.asymp.rep.A ~ dnorm(0, pow(1, -2))
+# Adult reproduction model
+ for (i in 1:n.year){
+  logit(mu.rep.A[i]) <- asymp.rep.A + beta.time.asymp.rep.A * time[i] - beta.env.rep.A * env.effect[i] - beta.repro.rep.A * latef[i,2] 
+  rep.A[i] ~ dbin(mu.rep.A[i], n.rep.A[i])
+}
+
+# Priors for yearling twinning 
+ asymp.twn.Y ~ dnorm(0, pow(100, -2))
+ beta.env.twn.Y ~ dnorm(0, pow(100, -2))
+ beta.time.asymp.twn.Y ~ dnorm(0, pow(1, -2))
+# Yearling twinning model
+ for (i in 1:n.year){
+   logit(mu.twn.Y[i]) <- asymp.twn.Y + beta.time.asymp.twn.Y * time[i] - beta.env.twn.Y * env.effect[i] 
+   twn.Y[i] ~ dbin(mu.twn.Y[i], n.twn.Y[i])
+ }
+ 
+ # Priors for ram lamb survival
+  asymp.surv.RL  ~ dnorm(0, pow(100, -2))
+  beta.env.surv.RL ~ dnorm(0, pow(100, -2))
+  beta.time.asymp.surv.RL ~ dnorm(0, pow(1, -2))
+  # Ram lamb survival data model
+  for (i in 1:n.year) {
+    logit(mu.surv.RL[i]) <- asymp.surv.RL + beta.time.asymp.surv.RL * time[i] - beta.env.surv.RL * env.effect[i]
+    surv.RL[i] ~ dbin(mu.surv.RL[i], n.surv.RL[i])
+  }
+
+# Priors for ram yearling survival coefficients 
+  asymp.surv.RY  ~ dunif(-10, 10)
+  thresh.surv.RY ~ dunif(2.4, 2.8)
+  beta.env.surv.RY ~ dunif(0, 50)
+  beta.time.asymp.surv.RY  ~ dunif(-1, 1)
+  # Ram yearling survival data model
+  for (i in 1:n.year) {
+    is.past.thresh.RY[i] <- step(env.effect[i] - thresh.surv.RY)
+    logit(mu.surv.RY[i]) <- asymp.surv.RY + beta.time.asymp.surv.RY * time[i] - is.past.thresh.RY[i] * beta.env.surv.RY * (env.effect[i] - thresh.surv.RY)
+    surv.RY[i] ~ dbin(mu.surv.RY[i], n.surv.RY[i])
+  }
+
+  # Priors for ram adult survival coefficients 
+  asymp.surv.RA  ~ dunif(-10, 10)
+  thresh.surv.RA ~ dunif(2.4, 2.8)
+  beta.env.surv.RA ~ dunif(0, 50)
+  beta.time.asymp.surv.RA ~ dunif(-1, 1)
+  # Ram adult survival data model
+  for (i in 1:n.year) {
+    is.past.thresh.RA[i] <- step(env.effect[i] - thresh.surv.RA)
+    logit(mu.surv.RA[i]) <- asymp.surv.RA + beta.time.asymp.surv.RA * time[i] - is.past.thresh.RA[i] * beta.env.surv.RA * (env.effect[i] - thresh.surv.RA)
+    surv.RA[i] ~ dbin(mu.surv.RA[i], n.surv.RA[i])
+  }
+
+}
