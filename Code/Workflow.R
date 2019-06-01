@@ -20,8 +20,7 @@ set.seed(110189)
 requiredPackageNames <- c(
   "dplyr", "lme4", "ggplot2", "rjags", 
   "tidyr", "plotrix", "mgcv",
-  "runjags", "snow", "foreach", 
-  "doParallel", "data.table", "gridExtra", "cowplot")
+  "runjags", "data.table", "gridExtra")
 # install (if we don't have it) and load up the package 
 sapply(requiredPackageNames, function(name) {
   if(!require(name, quietly=TRUE, character.only=TRUE)) {
@@ -88,7 +87,6 @@ postSample <- run.jags("./Code/SEM-FLM.jags",
                        modules="glm",
                        method="rjags")
 
-
 save(postSample, file = "Output.rda")
 
 ########################################################################################################################
@@ -100,8 +98,7 @@ save(postSample, file = "Output.rda")
 par(mfrow=c(3,2))
 plot(postSample)
 
-gelman.diag(postSample)
-
+gelman.diag(postSample, multivariate = FALSE)
 
 ########################################################################################################################
 ##### Plotting output #####
@@ -144,7 +141,7 @@ ggplot(filter(toplot, Vital=="Survival"), aes(x=Prop, y=pred)) + scale_color_man
   theme(aspect.ratio = 1, text = element_text(size = 9), axis.text= element_text(size = 8)) + xlim(c(0, 1)) + ylim(c(0, 1))
 
 ## We also recommend the use of cross validation to compare the predictive performance of different models  (e.g. comparing 
-## each model with a climatic driver to a base model with no drivers) to reduce the risk of overfitting
+## each model with a climatic driver to a base model with no drivers) to reduce the risk of overfitting (see manuscript for more details)
 
 ########################################################################################################################
 ##### Plot density vs. vital rates (fig. 3a in manuscript) #####
